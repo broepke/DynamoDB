@@ -1,5 +1,5 @@
-#
-#  Step 3.3: Update an Item
+#  
+#  Step 3.5: Update an Item (Conditionally)
 #
 #  Copyright 2010-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
@@ -15,6 +15,7 @@
 #
 from __future__ import print_function # Python 2/3 compatibility
 import boto3
+from botocore.exceptions import ClientError
 import json
 import decimal
 
@@ -35,19 +36,27 @@ table = dynamodb.Table('Movies')
 title = "The Big New Movie"
 year = 2015
 
-response = table.update_item(
-    Key={
-        'year': year,
-        'title': title
-    },
-    UpdateExpression="set info.rating = :r, info.plot=:p, info.actors=:a",
-    ExpressionAttributeValues={
-        ':r': decimal.Decimal(5.5),
-        ':p': "Everything happens all at once.",
-        ':a': ["Larry", "Moe", "Curly"]
-    },
-    ReturnValues="UPDATED_NEW"
-)
+# Conditional update (will fail)
+print("Attempting conditional update...")
 
-print("UpdateItem succeeded:")
-print(json.dumps(response, indent=4, cls=DecimalEncoder))
+try:
+    response = table.update_item(
+        Key={
+            'year': year,
+            'title': title
+        },
+        UpdateExpression="remove info.actors[0]",
+        ConditionExpression="size(info.actors) > :num",
+        ExpressionAttributeValues={
+            ':num': 3
+        },
+        ReturnValues="UPDATED_NEW"
+    )
+except ClientError as e:
+    if e.response['Error']['Code'] == "ConditionalCheckFailedException":
+        print(e.response['Error']['Message'])
+    else:
+        raise
+else:
+    print("UpdateItem succeeded:")
+    print(json.dumps(response, indent=4, cls=DecimalEncoder))

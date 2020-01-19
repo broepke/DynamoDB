@@ -1,5 +1,5 @@
 #
-#  Step 3.3: Update an Item
+#  Step 3.4: Increment an Atomic Counter
 #
 #  Copyright 2010-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
@@ -40,11 +40,9 @@ response = table.update_item(
         'year': year,
         'title': title
     },
-    UpdateExpression="set info.rating = :r, info.plot=:p, info.actors=:a",
+    UpdateExpression="set info.rating = info.rating + :val",
     ExpressionAttributeValues={
-        ':r': decimal.Decimal(5.5),
-        ':p': "Everything happens all at once.",
-        ':a': ["Larry", "Moe", "Curly"]
+        ':val': decimal.Decimal(1)
     },
     ReturnValues="UPDATED_NEW"
 )

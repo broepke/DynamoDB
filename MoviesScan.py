@@ -1,6 +1,6 @@
 #
-#  Step 3.3: Update an Item
-#
+#  Step 4.3: Scan
+# 
 #  Copyright 2010-2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
 #  This file is licensed under the Apache License, Version 2.0 (the "License").
@@ -17,6 +17,7 @@ from __future__ import print_function # Python 2/3 compatibility
 import boto3
 import json
 import decimal
+from boto3.dynamodb.conditions import Key, Attr
 
 # Helper class to convert a DynamoDB item to JSON.
 class DecimalEncoder(json.JSONEncoder):
@@ -32,22 +33,29 @@ dynamodb = boto3.resource('dynamodb', region_name='us-west-2', endpoint_url="htt
 
 table = dynamodb.Table('Movies')
 
-title = "The Big New Movie"
-year = 2015
+fe = Key('year').between(1950, 1959)
+pe = "#yr, title, info.rating"
+# Expression Attribute Names for Projection Expression only.
+ean = { "#yr": "year", }
+esk = None
 
-response = table.update_item(
-    Key={
-        'year': year,
-        'title': title
-    },
-    UpdateExpression="set info.rating = :r, info.plot=:p, info.actors=:a",
-    ExpressionAttributeValues={
-        ':r': decimal.Decimal(5.5),
-        ':p': "Everything happens all at once.",
-        ':a': ["Larry", "Moe", "Curly"]
-    },
-    ReturnValues="UPDATED_NEW"
-)
 
-print("UpdateItem succeeded:")
-print(json.dumps(response, indent=4, cls=DecimalEncoder))
+response = table.scan(
+    FilterExpression=fe,
+    ProjectionExpression=pe,
+    ExpressionAttributeNames=ean
+    )
+
+for i in response['Items']:
+    print(json.dumps(i, cls=DecimalEncoder))
+
+while 'LastEvaluatedKey' in response:
+    response = table.scan(
+        ProjectionExpression=pe,
+        FilterExpression=fe,
+        ExpressionAttributeNames= ean,
+        ExclusiveStartKey=response['LastEvaluatedKey']
+        )
+
+    for i in response['Items']:
+        print(json.dumps(i, cls=DecimalEncoder))
